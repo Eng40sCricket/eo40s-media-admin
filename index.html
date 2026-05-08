@@ -1066,6 +1066,141 @@ body {
   .tab-btn      { flex: 1; justify-content: center; padding: 10px 12px; font-size: 12px; }
   .login-card   { padding: 36px 24px; }
 }
+/* ============================================================
+   MANAGE PHOTOS TAB
+============================================================ */
+.manage-filter {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.manage-filter:hover { border-color: var(--sky); color: var(--sky); }
+.manage-filter.active { background: var(--navy-light); border-color: var(--sky); color: var(--white); }
+
+.manage-photo-card {
+  background: var(--navy-mid);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition);
+}
+.manage-photo-card:hover { border-color: rgba(59,158,219,0.3); box-shadow: var(--shadow); }
+
+.manage-photo-thumb {
+  position: relative;
+  width: 100%;
+  padding-top: 62%;
+  background: var(--navy-light);
+  overflow: hidden;
+}
+.manage-photo-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.manage-photo-thumb-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: rgba(255,255,255,0.15);
+}
+.manage-cat-badge {
+  position: absolute;
+  top: 8px; left: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.manage-cat-badge.team     { background: rgba(212,168,67,0.85); color: var(--navy); }
+.manage-cat-badge.portrait { background: rgba(11,31,58,0.8); color: var(--sky-light); border:1px solid rgba(59,158,219,0.4); }
+.manage-cat-badge.action   { background: rgba(59,158,219,0.85); color: var(--white); }
+
+.manage-photo-body {
+  padding: 14px 16px;
+}
+.manage-photo-caption {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.manage-photo-sub {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin-bottom: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.manage-photo-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-remove-photo {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(239,68,68,0.3);
+  background: transparent;
+  color: rgba(239,68,68,0.8);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.btn-remove-photo:hover { background: rgba(239,68,68,0.12); border-color: var(--error); color: var(--error); }
+
+.btn-replace-photo {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(59,158,219,0.3);
+  background: transparent;
+  color: var(--sky);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  position: relative;
+  overflow: hidden;
+}
+.btn-replace-photo:hover { background: rgba(59,158,219,0.1); border-color: var(--sky); }
+.btn-replace-photo input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
 </style>
 </head>
 <body>
@@ -1129,6 +1264,9 @@ body {
       </button>
       <button class="tab-btn" onclick="switchTab('galleries')" id="tab-galleries">
         <i class="fas fa-images"></i> Gallery Links
+      </button>
+      <button class="tab-btn" onclick="switchTab('manage')" id="tab-manage">
+        <i class="fas fa-th"></i> Manage Photos
       </button>
       <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
         <i class="fas fa-list"></i> Activity Log
@@ -1366,7 +1504,37 @@ body {
       </div>
     </div>
 
-    <!-- ── LOG TAB ── -->
+    <!-- ── MANAGE PHOTOS TAB ── -->
+    <div class="tab-panel" id="panel-manage">
+      <div class="panel-header">
+        <div class="panel-title">Manage <span>Photos</span></div>
+        <div class="panel-sub">Remove or replace individual photos currently showing on the media page. Changes are committed to GitHub immediately.</div>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div class="card-title" style="margin:0;"><i class="fas fa-sync-alt"></i> Live Photo Grid</div>
+          <button onclick="loadLivePhotos()" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:9px 20px;border-radius:var(--radius);border:1.5px solid rgba(59,158,219,0.35);background:transparent;color:var(--sky);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--transition);">
+            <i class="fas fa-sync-alt"></i> Refresh from GitHub
+          </button>
+        </div>
+        <p style="font-size:13px;color:var(--grey-500);margin-top:8px;line-height:1.5;">Click <strong style="color:var(--white);">Refresh from GitHub</strong> to load all current photos from the media page. You can then remove or replace any individual photo.</p>
+      </div>
+
+      <!-- Filter bar -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;" id="manage-filter-bar" style="display:none;">
+        <button class="manage-filter active" data-cat="all" onclick="setManageFilter(this,'all')">All</button>
+        <button class="manage-filter" data-cat="team" onclick="setManageFilter(this,'team')">Team Photos</button>
+        <button class="manage-filter" data-cat="portrait" onclick="setManageFilter(this,'portrait')">Portraits</button>
+        <button class="manage-filter" data-cat="action" onclick="setManageFilter(this,'action')">Action Shots</button>
+      </div>
+
+      <div id="manage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
+        <div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--grey-500);">
+          <i class="fas fa-cloud-download-alt" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.3;"></i>
+          Click <strong style="color:var(--white);">Refresh from GitHub</strong> to load photos.
+        </div>
+      </div>
+    </div>
     <div class="tab-panel" id="panel-log">
       <div class="panel-header">
         <div class="panel-title">Activity <span>Log</span></div>
@@ -1759,27 +1927,55 @@ function renderStatusStrip() {
   uploadQueue.forEach((q, i) => {
     const isComplete = q.meta.caption && q.meta.caption.trim();
     const el = document.createElement('div');
-    el.style.cssText = `display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;
+    el.style.cssText = `display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;
       background:${i === currentStep ? 'rgba(59,158,219,0.12)' : 'rgba(255,255,255,0.03)'};
       border:1px solid ${i === currentStep ? 'rgba(59,158,219,0.3)' : 'rgba(255,255,255,0.05)'};`;
+
+    const dotColor = q.status === 'done'      ? 'var(--success)'
+                   : q.status === 'error'     ? 'var(--error)'
+                   : q.status === 'uploading' ? 'var(--sky)'
+                   : isComplete               ? 'rgba(34,197,94,0.6)'
+                   : 'rgba(255,255,255,0.2)';
+
     el.innerHTML = `
-      <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${
-        q.status === 'done'     ? 'var(--success)' :
-        q.status === 'error'    ? 'var(--error)'   :
-        q.status === 'uploading'? 'var(--sky)'     :
-        isComplete              ? 'rgba(34,197,94,0.6)' : 'rgba(255,255,255,0.2)'}"></div>
-      <div style="flex:1;min-width:0;">
+      <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${dotColor};"></div>
+      <div style="flex:1;min-width:0;cursor:pointer;" onclick="saveCurrentFormToMeta();currentStep=${i};renderStep();">
         <div style="font-size:12px;font-weight:600;color:${i===currentStep?'var(--white)':'rgba(255,255,255,0.7)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           ${q.meta.caption || q.file.name}
         </div>
         <div style="font-size:11px;color:var(--grey-500);">
-          ${q.meta.category ? q.meta.category : '—'} · ${q.meta.season || '—'} · ${q.status}
+          ${q.meta.category || '—'} · ${q.meta.season || '—'} · ${q.status}
+          ${q.status === 'error' ? ' <span style="color:var(--error);">⚠ Failed — check file size (&lt;800KB)</span>' : ''}
         </div>
       </div>
-      <div style="font-size:11px;color:var(--grey-500);flex-shrink:0;">${i+1}</div>`;
-    el.onclick = () => { saveCurrentFormToMeta(); currentStep = i; renderStep(); };
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        ${q.status === 'error' ? `<button onclick="retryItem(${i})" title="Retry" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(59,158,219,0.3);background:transparent;color:var(--sky);cursor:pointer;font-family:var(--font-body);font-weight:600;">Retry</button>` : ''}
+        <button onclick="removeQueueItem(${i})" title="Remove" style="width:26px;height:26px;border-radius:6px;border:1px solid rgba(239,68,68,0.25);background:transparent;color:rgba(239,68,68,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.2s;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>`;
     strip.appendChild(el);
   });
+  // Update upload count to show only pending
+  const pendingCount = uploadQueue.filter(q => q.status === 'pending').length;
+  const lbl = document.getElementById('upload-count-label');
+  if (lbl) lbl.textContent = `(${pendingCount})`;
+}
+
+function removeQueueItem(idx) {
+  uploadQueue.splice(idx, 1);
+  if (uploadQueue.length === 0) {
+    resetUploader();
+    return;
+  }
+  currentStep = Math.min(currentStep, uploadQueue.length - 1);
+  renderStep();
+}
+
+function retryItem(idx) {
+  uploadQueue[idx].status = 'pending';
+  renderStatusStrip();
+  toast('Photo marked for retry. Click Upload All to re-attempt.', 'info');
 }
 
 function updatePreview() {
@@ -1797,7 +1993,7 @@ function updatePreview() {
   document.getElementById('preview-sub').textContent = sub;
 
   const item = uploadQueue[currentStep];
-  const filename = generateFilename(cat, season, opp, date, item ? item.file.name : 'photo.jpg');
+  const filename = generateFilename(cat, season, opp, date, item ? item.file.name : 'photo.jpg', currentStep);
 
   document.getElementById('generated-code').textContent =
 `<div class="photo-item" data-cat="${cat}" data-season="${season}"
@@ -1817,11 +2013,13 @@ function updatePreview() {
 </div>`;
 }
 
-function generateFilename(cat, season, opponent, date, originalName) {
+function generateFilename(cat, season, opponent, date, originalName, idx = 0) {
   const ext   = originalName.split('.').pop().toLowerCase();
   const parts = [cat, season];
   if (opponent) parts.push(opponent.toLowerCase().replace(/[^a-z0-9]/g, '-'));
   if (date)     parts.push(date.replace(/-/g, ''));
+  // Always append a unique counter so no two files ever overwrite each other
+  parts.push(String(idx + 1).padStart(2, '0'));
   return parts.join('-') + '.' + ext;
 }
 
@@ -1831,16 +2029,17 @@ async function startUpload() {
 
   if (!store.get('token')) { toast('No GitHub token configured. Go to Setup first.', 'error'); return; }
 
+  // Only upload items that are still pending — skip done/error items unless explicitly retried
   const pending = uploadQueue.filter(i => i.status === 'pending');
-  if (pending.length === 0) { toast('No photos ready to upload.', 'error'); return; }
+  if (pending.length === 0) { toast('No pending photos to upload. Use Clear to start again.', 'error'); btn.disabled = false; return; }
 
-  // Check all have captions
+  // Check all pending have captions
   const missing = pending.filter(i => !i.meta.caption || !i.meta.caption.trim());
   if (missing.length > 0) {
-    toast(`${missing.length} photo${missing.length > 1 ? 's are' : ' is'} missing a caption. Please fill in all captions first.`, 'error');
-    // Jump to first missing
+    toast(`${missing.length} photo${missing.length > 1 ? 's are' : ' is'} missing a caption.`, 'error');
     currentStep = uploadQueue.indexOf(missing[0]);
     renderStep();
+    btn.disabled = false;
     return;
   }
 
@@ -1879,7 +2078,9 @@ async function startUpload() {
 
     try {
       const base64   = await fileToBase64(item.file);
-      const filename = generateFilename(m.category, m.season, m.opponent, m.date, item.file.name);
+      // Use queue index for uniqueness — guarantees no filename collisions
+      const queueIdx = uploadQueue.indexOf(item);
+      const filename = generateFilename(m.category, m.season, m.opponent, m.date, item.file.name, queueIdx);
 
       await uploadBase64Image(filename, base64, `Add photo: ${filename}`);
       log(`Uploaded: ${filename}`, 'success');
@@ -2141,6 +2342,179 @@ function buildPhotoGalleriesJS() {
     return `    { year: ${s.year}, galleries: [${galStr}], url: ${JSON.stringify(s.galleries[0]?.url || '#')}, current: ${s.current} }`;
   });
   return `const PHOTO_GALLERIES = [\n${lines.join(',\n')}\n        ];`;
+}
+
+// ============================================================
+// MANAGE PHOTOS LOGIC
+// ============================================================
+let livePhotos     = [];   // parsed photo items from media/index.html
+let manageFilter   = 'all';
+let cachedIndexSha = null;
+let cachedIndexContent = null;
+
+async function loadLivePhotos() {
+  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  const grid = document.getElementById('manage-grid');
+  grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--grey-500);"><i class="fas fa-spinner fa-spin" style="font-size:2rem;margin-bottom:12px;display:block;"></i>Loading photos from GitHub…</div>`;
+
+  try {
+    const indexFile    = await githubGet('media/index.html');
+    cachedIndexSha     = indexFile.sha;
+    cachedIndexContent = decodeURIComponent(escape(atob(indexFile.content.replace(/\n/g, ''))));
+    livePhotos         = parsePhotosFromHTML(cachedIndexContent);
+    document.getElementById('manage-filter-bar').style.display = 'flex';
+    renderManageGrid();
+    log(`Loaded ${livePhotos.length} photos from media/index.html.`, 'info');
+    toast(`${livePhotos.length} photos loaded.`, 'success');
+  } catch (e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--error);">Failed to load: ${e.message}</div>`;
+    log('Error loading photos: ' + e.message, 'error');
+  }
+}
+
+// Parse photo items out of media/index.html HTML string
+function parsePhotosFromHTML(html) {
+  const photos = [];
+  // Match each photo-item div block
+  const blockRe = /<div\s+class="photo-item"([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
+  let match;
+  while ((match = blockRe.exec(html)) !== null) {
+    const block     = match[0];
+    const catMatch  = /data-cat="([^"]*)"/.exec(block);
+    const seasMatch = /data-season="([^"]*)"/.exec(block);
+    const capMatch  = /data-caption="([^"]*)"/.exec(block);
+    const subMatch  = /data-sub="([^"]*)"/.exec(block);
+    const srcMatch  = /src="([^"]*assets\/img\/photos\/[^"]*)"/.exec(block);
+    photos.push({
+      raw:     block,
+      cat:     catMatch  ? catMatch[1]  : '',
+      season:  seasMatch ? seasMatch[1] : '',
+      caption: capMatch  ? capMatch[1]  : '(no caption)',
+      sub:     subMatch  ? subMatch[1]  : '',
+      src:     srcMatch  ? srcMatch[1]  : '',
+    });
+  }
+  return photos;
+}
+
+function setManageFilter(btn, cat) {
+  document.querySelectorAll('.manage-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  manageFilter = cat;
+  renderManageGrid();
+}
+
+function renderManageGrid() {
+  const grid = document.getElementById('manage-grid');
+  const visible = manageFilter === 'all'
+    ? livePhotos
+    : livePhotos.filter(p => p.cat === manageFilter);
+
+  if (visible.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--grey-500);">No photos found${manageFilter !== 'all' ? ' in this category' : ''}.</div>`;
+    return;
+  }
+
+  grid.innerHTML = '';
+  visible.forEach((photo, visIdx) => {
+    const realIdx = livePhotos.indexOf(photo);
+    const card = document.createElement('div');
+    card.className = 'manage-photo-card';
+    card.id = `manage-card-${realIdx}`;
+
+    // Build image or placeholder
+    const imgHtml = photo.src
+      ? `<img src="https://raw.githubusercontent.com/${getConfig().owner}/${getConfig().repo}/main/${photo.src.replace('../','')}" alt="${photo.caption}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+         <div class="manage-photo-thumb-placeholder" style="display:none;"><i class="fas fa-image"></i></div>`
+      : `<div class="manage-photo-thumb-placeholder"><i class="fas fa-image"></i></div>`;
+
+    card.innerHTML = `
+      <div class="manage-photo-thumb">
+        ${imgHtml}
+        <div class="manage-cat-badge ${photo.cat}">${photo.cat || '—'}</div>
+      </div>
+      <div class="manage-photo-body">
+        <div class="manage-photo-caption">${photo.caption}</div>
+        <div class="manage-photo-sub">${photo.sub || photo.season}</div>
+        <div class="manage-photo-actions">
+          <button class="btn-remove-photo" onclick="removePhoto(${realIdx})">
+            <i class="fas fa-trash"></i> Remove
+          </button>
+          <label class="btn-replace-photo">
+            <i class="fas fa-sync-alt"></i> Replace
+            <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
+                   onchange="replacePhoto(${realIdx}, this.files[0])">
+          </label>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+async function removePhoto(idx) {
+  if (!confirm(`Remove "${livePhotos[idx].caption}" from the media page?`)) return;
+  if (!cachedIndexContent) { toast('Please refresh first.', 'error'); return; }
+
+  const photo  = livePhotos[idx];
+  const newHtml = cachedIndexContent.replace(photo.raw, '');
+
+  try {
+    toast('Removing photo…', 'info');
+    await githubPut('media/index.html', newHtml, `Remove photo: ${photo.caption}`, cachedIndexSha);
+    cachedIndexContent = newHtml;
+    // Get new SHA
+    const updated  = await githubGet('media/index.html');
+    cachedIndexSha = updated.sha;
+    livePhotos.splice(idx, 1);
+    renderManageGrid();
+    toast(`"${photo.caption}" removed from the media page.`, 'success');
+    log(`Removed photo: ${photo.caption}`, 'success');
+  } catch (e) {
+    toast('Remove failed: ' + e.message, 'error');
+    log('Remove failed: ' + e.message, 'error');
+  }
+}
+
+async function replacePhoto(idx, file) {
+  if (!file) return;
+  if (!cachedIndexContent) { toast('Please refresh first.', 'error'); return; }
+  if (file.size > 900000) {
+    toast('File too large — please compress to under 900KB first.', 'error');
+    return;
+  }
+
+  const photo    = livePhotos[idx];
+  const cfg      = getConfig();
+  const ext      = file.name.split('.').pop().toLowerCase();
+  const newFilename = photo.src
+    ? photo.src.replace('../assets/img/photos/', '').replace(/\.[^.]+$/, '-replaced.' + ext)
+    : `${photo.cat}-${photo.season}-replaced-${Date.now()}.${ext}`;
+
+  try {
+    toast(`Uploading replacement image…`, 'info');
+    const base64 = await fileToBase64(file);
+    await uploadBase64Image(newFilename, base64, `Replace photo: ${photo.caption}`);
+
+    // Update the src in the HTML
+    let newHtml = cachedIndexContent;
+    if (photo.src) {
+      newHtml = newHtml.replace(photo.src, `../assets/img/photos/${newFilename}`);
+    }
+
+    await githubPut('media/index.html', newHtml, `Replace image for: ${photo.caption}`, cachedIndexSha);
+    cachedIndexContent    = newHtml;
+    livePhotos[idx].src   = `../assets/img/photos/${newFilename}`;
+
+    const updated  = await githubGet('media/index.html');
+    cachedIndexSha = updated.sha;
+
+    renderManageGrid();
+    toast(`Photo replaced successfully!`, 'success');
+    log(`Replaced image for: ${photo.caption} → ${newFilename}`, 'success');
+  } catch (e) {
+    toast('Replace failed: ' + e.message, 'error');
+    log('Replace failed: ' + e.message, 'error');
+  }
 }
 
 </script>
