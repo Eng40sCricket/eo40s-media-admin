@@ -1205,30 +1205,49 @@ body {
     <div class="tab-panel" id="panel-photos">
       <div class="panel-header">
         <div class="panel-title">Upload <span>Photos</span></div>
-        <div class="panel-sub">Select one or more photos — they'll be resized, named, uploaded to GitHub, and the HTML card added to media/index.html automatically.</div>
+        <div class="panel-sub">Select one or more photos. You'll fill in details for each one individually before uploading.</div>
       </div>
 
-      <div class="upload-layout">
-        <!-- Left: form -->
-        <div>
-          <!-- Drop zone -->
-          <div class="drop-zone" id="drop-zone">
-            <input type="file" id="file-input" accept="image/jpeg,image/jpg,image/png,image/webp" multiple>
-            <div class="drop-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-            <div class="drop-zone-title">Drop photos here or tap to select</div>
-            <div class="drop-zone-sub">JPEG · PNG · WebP &nbsp;·&nbsp; <strong>Multiple files supported</strong></div>
+      <!-- STEP 1: Drop zone (shown when queue is empty) -->
+      <div id="upload-step-1">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/jpeg,image/jpg,image/png,image/webp" multiple>
+          <div class="drop-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+          <div class="drop-zone-title">Drop photos here or tap to select</div>
+          <div class="drop-zone-sub">JPEG · PNG · WebP &nbsp;·&nbsp; <strong>Multiple files supported</strong></div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Per-photo editor (shown after files selected) -->
+      <div id="upload-step-2" style="display:none;">
+
+        <!-- Progress indicator -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--grey-500);">PHOTO</div>
+            <div style="font-family:var(--font-display);font-size:28px;color:var(--white);line-height:1;" id="step-counter">1 / 1</div>
           </div>
+          <div style="display:flex;gap:8px;" id="step-dots"></div>
+          <div style="display:flex;gap:10px;">
+            <button onclick="stepNav(-1)" id="btn-prev" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:8px 18px;border-radius:var(--radius);border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--white);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--sky)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)'">
+              <i class="fas fa-chevron-left"></i> Prev
+            </button>
+            <button onclick="stepNav(1)" id="btn-next" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:8px 18px;border-radius:var(--radius);border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:var(--white);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--sky)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)'">
+              Next <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
 
-          <!-- File queue -->
-          <div class="file-queue" id="file-queue"></div>
+        <!-- Editor layout -->
+        <div class="upload-layout">
 
-          <!-- Metadata form -->
-          <div class="card" id="metadata-form" style="display:none;">
-            <div class="card-title"><i class="fas fa-tag"></i> Photo Details</div>
+          <!-- Left: photo form -->
+          <div class="card">
+            <div class="card-title"><i class="fas fa-tag"></i> Photo Details — <span id="current-filename" style="font-family:var(--font-mono);font-size:11px;color:var(--grey-500);text-transform:none;letter-spacing:0;">filename.jpg</span></div>
             <div class="form-grid-2">
               <div class="field-group">
                 <label class="field-label">Category</label>
-                <select class="field-select" id="meta-category" onchange="updatePreview()">
+                <select class="field-select" id="meta-category" onchange="updateCurrentMeta('category',this.value);updatePreview()">
                   <option value="team">Team Photo</option>
                   <option value="portrait">Portrait</option>
                   <option value="action">Action Shot</option>
@@ -1236,7 +1255,7 @@ body {
               </div>
               <div class="field-group">
                 <label class="field-label">Season</label>
-                <select class="field-select" id="meta-season" onchange="updatePreview()">
+                <select class="field-select" id="meta-season" onchange="updateCurrentMeta('season',this.value);updatePreview()">
                   <option value="2026">2026</option>
                   <option value="2025">2025</option>
                   <option value="2024">2024</option>
@@ -1245,56 +1264,70 @@ body {
               </div>
               <div class="field-group">
                 <label class="field-label">Opponent</label>
-                <input type="text" class="field-input" id="meta-opponent" placeholder="e.g. India, Scotland" oninput="updatePreview()">
+                <input type="text" class="field-input" id="meta-opponent" placeholder="e.g. India, Scotland" oninput="updateCurrentMeta('opponent',this.value);updatePreview()">
               </div>
               <div class="field-group">
                 <label class="field-label">Match Date</label>
-                <input type="date" class="field-input" id="meta-date" oninput="updatePreview()">
+                <input type="date" class="field-input" id="meta-date" oninput="updateCurrentMeta('date',this.value);updatePreview()">
               </div>
               <div class="field-group field-full">
                 <label class="field-label">Caption</label>
-                <input type="text" class="field-input" id="meta-caption" placeholder="e.g. England Over 40s — 2026 Squad" oninput="updatePreview()">
+                <input type="text" class="field-input" id="meta-caption" placeholder="e.g. Batting — England v India" oninput="updateCurrentMeta('caption',this.value);updatePreview()">
               </div>
               <div class="field-group field-full">
                 <label class="field-label">Sub-caption</label>
-                <input type="text" class="field-input" id="meta-sub" placeholder="e.g. Pre-season team photo · 2026" oninput="updatePreview()">
+                <input type="text" class="field-input" id="meta-sub" placeholder="e.g. 1st ODI · 27 May 2026" oninput="updateCurrentMeta('sub',this.value);updatePreview()">
               </div>
             </div>
 
-            <div class="upload-progress" id="upload-progress">
+            <!-- Completion status strip -->
+            <div id="queue-status-strip" style="margin-top:20px;display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;"></div>
+
+            <!-- Upload all / Add more -->
+            <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+              <button class="btn-upload" id="btn-upload" onclick="startUpload()" style="flex:1;">
+                <i class="fas fa-upload"></i> Upload All <span id="upload-count-label">(0)</span>
+              </button>
+              <button onclick="addMorePhotos()" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:13px 18px;border-radius:var(--radius);border:1.5px dashed rgba(59,158,219,0.35);background:transparent;color:var(--sky);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--sky)'" onmouseout="this.style.borderColor='rgba(59,158,219,0.35)'">
+                <i class="fas fa-plus"></i> Add More
+              </button>
+              <button onclick="resetUploader()" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:13px 18px;border-radius:var(--radius);border:1.5px solid rgba(239,68,68,0.25);background:transparent;color:rgba(239,68,68,0.7);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--error)';this.style.color='var(--error)'" onmouseout="this.style.borderColor='rgba(239,68,68,0.25)';this.style.color='rgba(239,68,68,0.7)'">
+                <i class="fas fa-trash"></i> Clear
+              </button>
+            </div>
+
+            <div class="upload-progress" id="upload-progress" style="display:none;margin-top:16px;">
               <div class="progress-bar-track">
                 <div class="progress-bar-fill" id="progress-fill"></div>
               </div>
-              <div class="progress-label" id="progress-label">Uploading 0 of 0…</div>
+              <div class="progress-label" id="progress-label">Uploading…</div>
             </div>
 
-            <button class="btn-upload" id="btn-upload" onclick="startUpload()">
-              <i class="fas fa-upload"></i> Upload & Add to Media Page
-            </button>
+            <!-- Hidden file input for Add More -->
+            <input type="file" id="file-input-more" accept="image/jpeg,image/jpg,image/png,image/webp" multiple style="display:none;">
           </div>
-        </div>
 
-        <!-- Right: preview sidebar -->
-        <div class="preview-sidebar">
-          <div class="card">
-            <div class="card-title"><i class="fas fa-eye"></i> Card Preview</div>
-            <div class="preview-card-mock">
-              <div class="preview-img-placeholder" id="preview-placeholder">
-                <i class="fas fa-image"></i>
-                <span>Select a photo</span>
+          <!-- Right: preview -->
+          <div class="preview-sidebar">
+            <div class="card">
+              <div class="card-title"><i class="fas fa-eye"></i> Card Preview</div>
+              <div class="preview-card-mock">
+                <div class="preview-img-placeholder" id="preview-placeholder">
+                  <i class="fas fa-image"></i>
+                  <span>Select a photo</span>
+                </div>
+                <img class="preview-img" id="preview-img" src="" alt="" style="display:none;">
+                <div class="preview-overlay" id="preview-overlay" style="display:none;">
+                  <div class="preview-type-badge" id="preview-badge">Team Photo</div>
+                  <div class="preview-caption" id="preview-caption">Caption appears here</div>
+                  <div class="preview-sub" id="preview-sub">Sub-caption appears here</div>
+                </div>
               </div>
-              <img class="preview-img" id="preview-img" src="" alt="" style="display:none;">
-              <div class="preview-overlay" id="preview-overlay" style="display:none;">
-                <div class="preview-type-badge" id="preview-badge">Team Photo</div>
-                <div class="preview-caption" id="preview-caption">Caption appears here</div>
-                <div class="preview-sub" id="preview-sub">Sub-caption appears here</div>
-              </div>
-            </div>
-            <div class="card-title" style="margin-top:16px;"><i class="fas fa-code"></i> Generated HTML</div>
-            <div class="generated-code-box" id="generated-code">
-              Select a photo and fill in details to see the generated code.
+              <div class="card-title" style="margin-top:16px;"><i class="fas fa-code"></i> Generated HTML</div>
+              <div class="generated-code-box" id="generated-code">Fill in details to see generated code.</div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -1583,68 +1616,125 @@ async function uploadBase64Image(filename, base64Data, message) {
 }
 
 // ============================================================
-// PHOTO UPLOAD LOGIC
+// PHOTO UPLOAD — PER-PHOTO STEP-THROUGH
 // ============================================================
-let uploadQueue = [];
-let currentPreviewFile = null;
+let uploadQueue   = [];   // [{ file, status, meta:{category,season,opponent,date,caption,sub} }]
+let currentStep   = 0;    // index of photo currently being edited
 
-const fileInput    = document.getElementById('file-input');
-const dropZone     = document.getElementById('drop-zone');
-const fileQueueEl  = document.getElementById('file-queue');
-const metaFormEl   = document.getElementById('metadata-form');
+// Wire up file inputs
+document.getElementById('file-input').addEventListener('change', e => {
+  addFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
+document.getElementById('file-input-more').addEventListener('change', e => {
+  addFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
 
-fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files)));
-
+const dropZone = document.getElementById('drop-zone');
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); addFiles(Array.from(e.dataTransfer.files)); });
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  addFiles(Array.from(e.dataTransfer.files));
+});
 
 function addFiles(files) {
   files.forEach(f => {
     if (!f.type.startsWith('image/')) return;
-    uploadQueue.push({ file: f, status: 'pending', id: Date.now() + Math.random() });
+    uploadQueue.push({
+      file: f,
+      status: 'pending',
+      id: Date.now() + Math.random(),
+      meta: { category: 'action', season: '2026', opponent: '', date: '', caption: '', sub: '' }
+    });
   });
-  renderQueue();
   if (uploadQueue.length > 0) {
-    metaFormEl.style.display = 'block';
-    if (!currentPreviewFile) setPreviewFile(uploadQueue[0]);
+    document.getElementById('upload-step-1').style.display = 'none';
+    document.getElementById('upload-step-2').style.display = 'block';
+    currentStep = uploadQueue.length - files.length; // jump to first new photo
+    renderStep();
   }
 }
 
-function renderQueue() {
-  fileQueueEl.innerHTML = '';
-  uploadQueue.forEach((item, idx) => {
-    const el = document.createElement('div');
-    el.className = 'file-item';
-    el.id = 'file-item-' + item.id;
-    const thumbSrc = URL.createObjectURL(item.file);
-    el.innerHTML = `
-      <img class="file-thumb" src="${thumbSrc}" alt="">
-      <div class="file-info">
-        <div class="file-name">${item.file.name}</div>
-        <div class="file-size">${(item.file.size / 1024).toFixed(0)} KB</div>
-      </div>
-      <span class="file-status ${item.status}">${item.status}</span>
-      <button class="file-remove" onclick="removeFile(${idx})" title="Remove"><i class="fas fa-times"></i></button>`;
-    el.addEventListener('click', (e) => { if (!e.target.closest('.file-remove')) setPreviewFile(item); });
-    fileQueueEl.appendChild(el);
+function addMorePhotos() {
+  document.getElementById('file-input-more').click();
+}
+
+function resetUploader() {
+  uploadQueue = [];
+  currentStep = 0;
+  document.getElementById('upload-step-1').style.display = 'block';
+  document.getElementById('upload-step-2').style.display = 'none';
+}
+
+// Navigate between photos
+function stepNav(dir) {
+  saveCurrentFormToMeta();
+  currentStep = Math.max(0, Math.min(uploadQueue.length - 1, currentStep + dir));
+  renderStep();
+}
+
+// Save the form fields into the current item's meta
+function saveCurrentFormToMeta() {
+  if (!uploadQueue[currentStep]) return;
+  uploadQueue[currentStep].meta = {
+    category: document.getElementById('meta-category').value,
+    season:   document.getElementById('meta-season').value,
+    opponent: document.getElementById('meta-opponent').value,
+    date:     document.getElementById('meta-date').value,
+    caption:  document.getElementById('meta-caption').value,
+    sub:      document.getElementById('meta-sub').value,
+  };
+}
+
+// Called by inline oninput/onchange — updates the current item's meta live
+function updateCurrentMeta(field, value) {
+  if (!uploadQueue[currentStep]) return;
+  uploadQueue[currentStep].meta[field] = value;
+  renderStatusStrip();
+}
+
+// Render the current step's form, preview, navigation
+function renderStep() {
+  const item = uploadQueue[currentStep];
+  if (!item) return;
+
+  // Counter
+  document.getElementById('step-counter').textContent = `${currentStep + 1} / ${uploadQueue.length}`;
+
+  // Nav buttons
+  document.getElementById('btn-prev').style.opacity = currentStep === 0 ? '0.35' : '1';
+  document.getElementById('btn-next').style.opacity = currentStep === uploadQueue.length - 1 ? '0.35' : '1';
+
+  // Step dots
+  const dotsEl = document.getElementById('step-dots');
+  dotsEl.innerHTML = '';
+  uploadQueue.forEach((q, i) => {
+    const dot = document.createElement('div');
+    const isComplete = q.meta.caption && q.meta.category;
+    dot.style.cssText = `width:10px;height:10px;border-radius:50%;cursor:pointer;transition:all 0.2s;flex-shrink:0;
+      background:${i === currentStep ? 'var(--sky)' : isComplete ? 'var(--success)' : 'rgba(255,255,255,0.15)'};
+      transform:${i === currentStep ? 'scale(1.3)' : 'scale(1)'};`;
+    dot.title = q.file.name;
+    dot.onclick = () => { saveCurrentFormToMeta(); currentStep = i; renderStep(); };
+    dotsEl.appendChild(dot);
   });
-}
 
-function removeFile(idx) {
-  uploadQueue.splice(idx, 1);
-  renderQueue();
-  if (uploadQueue.length === 0) {
-    metaFormEl.style.display = 'none';
-    currentPreviewFile = null;
-    clearPreview();
-  } else {
-    setPreviewFile(uploadQueue[0]);
-  }
-}
+  // Filename
+  document.getElementById('current-filename').textContent = item.file.name;
 
-function setPreviewFile(item) {
-  currentPreviewFile = item;
+  // Load meta into form
+  const m = item.meta;
+  document.getElementById('meta-category').value = m.category || 'action';
+  document.getElementById('meta-season').value   = m.season   || '2026';
+  document.getElementById('meta-opponent').value = m.opponent || '';
+  document.getElementById('meta-date').value     = m.date     || '';
+  document.getElementById('meta-caption').value  = m.caption  || '';
+  document.getElementById('meta-sub').value      = m.sub      || '';
+
+  // Load photo preview
   const reader = new FileReader();
   reader.onload = e => {
     document.getElementById('preview-placeholder').style.display = 'none';
@@ -1654,14 +1744,42 @@ function setPreviewFile(item) {
     document.getElementById('preview-overlay').style.display = 'block';
   };
   reader.readAsDataURL(item.file);
+
+  // Upload count label
+  document.getElementById('upload-count-label').textContent = `(${uploadQueue.filter(q => q.status === 'pending').length})`;
+
+  renderStatusStrip();
   updatePreview();
 }
 
-function clearPreview() {
-  document.getElementById('preview-placeholder').style.display = 'flex';
-  document.getElementById('preview-img').style.display = 'none';
-  document.getElementById('preview-overlay').style.display = 'none';
-  document.getElementById('generated-code').textContent = 'Select a photo and fill in details to see the generated code.';
+// Status strip — compact list of all photos and their completion state
+function renderStatusStrip() {
+  const strip = document.getElementById('queue-status-strip');
+  strip.innerHTML = '';
+  uploadQueue.forEach((q, i) => {
+    const isComplete = q.meta.caption && q.meta.caption.trim();
+    const el = document.createElement('div');
+    el.style.cssText = `display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;
+      background:${i === currentStep ? 'rgba(59,158,219,0.12)' : 'rgba(255,255,255,0.03)'};
+      border:1px solid ${i === currentStep ? 'rgba(59,158,219,0.3)' : 'rgba(255,255,255,0.05)'};`;
+    el.innerHTML = `
+      <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${
+        q.status === 'done'     ? 'var(--success)' :
+        q.status === 'error'    ? 'var(--error)'   :
+        q.status === 'uploading'? 'var(--sky)'     :
+        isComplete              ? 'rgba(34,197,94,0.6)' : 'rgba(255,255,255,0.2)'}"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:${i===currentStep?'var(--white)':'rgba(255,255,255,0.7)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${q.meta.caption || q.file.name}
+        </div>
+        <div style="font-size:11px;color:var(--grey-500);">
+          ${q.meta.category ? q.meta.category : '—'} · ${q.meta.season || '—'} · ${q.status}
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--grey-500);flex-shrink:0;">${i+1}</div>`;
+    el.onclick = () => { saveCurrentFormToMeta(); currentStep = i; renderStep(); };
+    strip.appendChild(el);
+  });
 }
 
 function updatePreview() {
@@ -1672,19 +1790,17 @@ function updatePreview() {
   const opp     = document.getElementById('meta-opponent').value;
   const date    = document.getElementById('meta-date').value;
 
-  // Badge
   const badge = document.getElementById('preview-badge');
   badge.textContent = cat === 'team' ? 'Team Photo' : cat === 'portrait' ? 'Portrait' : 'Action Shot';
   badge.className = 'preview-type-badge ' + cat;
-
   document.getElementById('preview-caption').textContent = caption;
   document.getElementById('preview-sub').textContent = sub;
 
-  // Generate filename
-  const filename = generateFilename(cat, season, opp, date, currentPreviewFile ? currentPreviewFile.file.name : 'photo.jpg');
+  const item = uploadQueue[currentStep];
+  const filename = generateFilename(cat, season, opp, date, item ? item.file.name : 'photo.jpg');
 
-  // Generate code
-  const code = `<div class="photo-item" data-cat="${cat}" data-season="${season}"
+  document.getElementById('generated-code').textContent =
+`<div class="photo-item" data-cat="${cat}" data-season="${season}"
      data-caption="${caption}"
      data-sub="${sub}"
      tabindex="0" role="button"
@@ -1699,42 +1815,44 @@ function updatePreview() {
         <i class="fas fa-expand"></i>
     </div>
 </div>`;
-  document.getElementById('generated-code').textContent = code;
 }
 
 function generateFilename(cat, season, opponent, date, originalName) {
-  const ext = originalName.split('.').pop().toLowerCase();
+  const ext   = originalName.split('.').pop().toLowerCase();
   const parts = [cat, season];
   if (opponent) parts.push(opponent.toLowerCase().replace(/[^a-z0-9]/g, '-'));
-  if (date) parts.push(date.replace(/-/g, ''));
+  if (date)     parts.push(date.replace(/-/g, ''));
   return parts.join('-') + '.' + ext;
 }
 
 async function startUpload() {
+  // Save whatever is in the form right now before uploading
+  saveCurrentFormToMeta();
+
   if (!store.get('token')) { toast('No GitHub token configured. Go to Setup first.', 'error'); return; }
-  if (uploadQueue.length === 0) { toast('No photos in the queue.', 'error'); return; }
+
+  const pending = uploadQueue.filter(i => i.status === 'pending');
+  if (pending.length === 0) { toast('No photos ready to upload.', 'error'); return; }
+
+  // Check all have captions
+  const missing = pending.filter(i => !i.meta.caption || !i.meta.caption.trim());
+  if (missing.length > 0) {
+    toast(`${missing.length} photo${missing.length > 1 ? 's are' : ' is'} missing a caption. Please fill in all captions first.`, 'error');
+    // Jump to first missing
+    currentStep = uploadQueue.indexOf(missing[0]);
+    renderStep();
+    return;
+  }
 
   const btn = document.getElementById('btn-upload');
   btn.disabled = true;
-
-  const cat     = document.getElementById('meta-category').value;
-  const season  = document.getElementById('meta-season').value;
-  const caption = document.getElementById('meta-caption').value;
-  const sub     = document.getElementById('meta-sub').value;
-  const opp     = document.getElementById('meta-opponent').value;
-  const date    = document.getElementById('meta-date').value;
-
-  if (!caption) { toast('Please enter a caption before uploading.', 'error'); btn.disabled = false; return; }
 
   const progressEl = document.getElementById('upload-progress');
   const fillEl     = document.getElementById('progress-fill');
   const labelEl    = document.getElementById('progress-label');
   progressEl.style.display = 'block';
 
-  const pending = uploadQueue.filter(i => i.status === 'pending');
-  let done = 0;
-
-  // Get current media/index.html
+  // Fetch media/index.html once
   let indexFile, indexSha, indexContent;
   try {
     toast('Fetching media/index.html…', 'info');
@@ -1748,56 +1866,64 @@ async function startUpload() {
     return;
   }
 
+  let done = 0;
+
   for (let i = 0; i < pending.length; i++) {
     const item = pending[i];
+    const m    = item.meta;
+    item.status = 'uploading';
+    renderStatusStrip();
+
     labelEl.textContent = `Uploading ${i + 1} of ${pending.length}: ${item.file.name}`;
-    setFileStatus(item.id, 'uploading');
+    fillEl.style.width  = (i / pending.length * 70) + '%';
 
     try {
-      // Read file as base64
-      const base64 = await fileToBase64(item.file);
-      const filename = generateFilename(cat, season, opp, date, item.file.name);
+      const base64   = await fileToBase64(item.file);
+      const filename = generateFilename(m.category, m.season, m.opponent, m.date, item.file.name);
 
-      // Upload image to GitHub
       await uploadBase64Image(filename, base64, `Add photo: ${filename}`);
-      log(`Uploaded image: ${filename}`, 'success');
+      log(`Uploaded: ${filename}`, 'success');
 
-      // Generate HTML card
-      const htmlCard = generatePhotoCard(cat, season, caption, sub, filename);
+      const htmlCard = generatePhotoCard(m.category, m.season, m.caption, m.sub, filename);
 
-      // Insert card into media/index.html before </div><!-- /photo-grid -->
       if (indexContent.includes('</div><!-- /photo-grid -->')) {
-        indexContent = indexContent.replace('</div><!-- /photo-grid -->', htmlCard + '\n\n                </div><!-- /photo-grid -->');
-      } else if (indexContent.includes('id="photo-grid"')) {
-        // Fallback: insert before closing div of photo-grid section
-        indexContent = indexContent.replace(/(<div[^>]+id="photo-grid"[^>]*>)([\s\S]*?)(<\/div>)(\s*<!--\s*\/photo-grid)/, '$1$2' + htmlCard + '\n$3$4');
+        indexContent = indexContent.replace(
+          '</div><!-- /photo-grid -->',
+          htmlCard + '\n\n                </div><!-- /photo-grid -->'
+        );
       } else {
-        toast(`Warning: Could not find photo-grid in index.html. Image uploaded but card not inserted.`, 'warn');
-        log('Could not locate photo-grid insertion point in media/index.html.', 'error');
+        toast(`Warning: photo-grid marker not found. ${filename} uploaded but card not inserted.`, 'error');
+        log('Could not locate photo-grid insertion point.', 'error');
       }
 
-      setFileStatus(item.id, 'done');
+      item.status = 'done';
       done++;
 
     } catch (e) {
-      setFileStatus(item.id, 'error');
+      item.status = 'error';
       toast(`Failed: ${item.file.name} — ${e.message}`, 'error');
       log(`Upload failed for ${item.file.name}: ${e.message}`, 'error');
     }
 
-    fillEl.style.width = ((i + 1) / pending.length * 70) + '%';
+    renderStatusStrip();
   }
 
-  // Save updated media/index.html
+  // Commit the updated index.html once for all photos
   if (done > 0) {
     try {
       labelEl.textContent = 'Saving media/index.html…';
-      fillEl.style.width = '85%';
-      await githubPut('media/index.html', indexContent, `Add ${done} photo card${done > 1 ? 's' : ''} to media grid`, indexSha);
-      fillEl.style.width = '100%';
+      fillEl.style.width  = '85%';
+      await githubPut(
+        'media/index.html',
+        indexContent,
+        `Add ${done} photo card${done > 1 ? 's' : ''} to media grid`,
+        indexSha
+      );
+      fillEl.style.width  = '100%';
       labelEl.textContent = `Done — ${done} photo${done > 1 ? 's' : ''} uploaded successfully.`;
       toast(`${done} photo${done > 1 ? 's' : ''} uploaded and added to the media page!`, 'success');
-      log(`${done} photo card${done > 1 ? 's' : ''} inserted into media/index.html and committed.`, 'success');
+      log(`${done} photo card${done > 1 ? 's' : ''} committed to media/index.html.`, 'success');
+      document.getElementById('upload-count-label').textContent = '(0)';
     } catch (e) {
       toast('Images uploaded but could not save index.html: ' + e.message, 'error');
       log('Error saving media/index.html: ' + e.message, 'error');
@@ -1805,12 +1931,12 @@ async function startUpload() {
   }
 
   btn.disabled = false;
+  renderStatusStrip();
 }
 
 function setFileStatus(id, status) {
   const item = uploadQueue.find(i => i.id === id);
-  if (item) item.status = status;
-  renderQueue();
+  if (item) { item.status = status; renderStatusStrip(); }
 }
 
 function fileToBase64(file) {
