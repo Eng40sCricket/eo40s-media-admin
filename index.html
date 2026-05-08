@@ -2108,19 +2108,6 @@ async function startUpload() {
   const uploadable = pending.filter(i => i.file.size <= 900000);
   if (uploadable.length === 0) { toast('No uploadable photos — all files are over 900KB. Please compress them first.', 'error'); btn.disabled = false; return; }
 
-  // Check all pending have captions
-  const missing = pending.filter(i => !i.meta.caption || !i.meta.caption.trim());
-  if (missing.length > 0) {
-    toast(`${missing.length} photo${missing.length > 1 ? 's are' : ' is'} missing a caption.`, 'error');
-    currentStep = uploadQueue.indexOf(missing[0]);
-    renderStep();
-    btn.disabled = false;
-    return;
-  }
-
-  const btn = document.getElementById('btn-upload');
-  btn.disabled = true;
-
   const progressEl = document.getElementById('upload-progress');
   const fillEl     = document.getElementById('progress-fill');
   const labelEl    = document.getElementById('progress-label');
