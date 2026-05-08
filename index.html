@@ -1429,8 +1429,11 @@ body {
               <button onclick="addMorePhotos()" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:13px 18px;border-radius:var(--radius);border:1.5px dashed rgba(59,158,219,0.35);background:transparent;color:var(--sky);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--sky)'" onmouseout="this.style.borderColor='rgba(59,158,219,0.35)'">
                 <i class="fas fa-plus"></i> Add More
               </button>
+              <button onclick="clearDone()" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:13px 18px;border-radius:var(--radius);border:1.5px solid rgba(34,197,94,0.25);background:transparent;color:rgba(34,197,94,0.8);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--success)';this.style.color='var(--success)'" onmouseout="this.style.borderColor='rgba(34,197,94,0.25)';this.style.color='rgba(34,197,94,0.8)'">
+                <i class="fas fa-check-double"></i> Clear Done
+              </button>
               <button onclick="resetUploader()" style="font-family:var(--font-body);font-size:13px;font-weight:600;padding:13px 18px;border-radius:var(--radius);border:1.5px solid rgba(239,68,68,0.25);background:transparent;color:rgba(239,68,68,0.7);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--error)';this.style.color='var(--error)'" onmouseout="this.style.borderColor='rgba(239,68,68,0.25)';this.style.color='rgba(239,68,68,0.7)'">
-                <i class="fas fa-trash"></i> Clear
+                <i class="fas fa-trash"></i> Clear All
               </button>
             </div>
 
@@ -1533,6 +1536,20 @@ body {
           <i class="fas fa-cloud-download-alt" style="font-size:2rem;margin-bottom:12px;display:block;opacity:0.3;"></i>
           Click <strong style="color:var(--white);">Refresh from GitHub</strong> to load photos.
         </div>
+      </div>
+
+      <!-- Gallery Index quick editor -->
+      <div class="card" style="margin-top:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+          <div class="card-title" style="margin:0;"><i class="fas fa-images"></i> Season Gallery Links — Quick Edit</div>
+          <span style="font-size:12px;color:var(--grey-500);">Edit Lightroom links directly here then save to GitHub</span>
+        </div>
+        <div id="manage-gallery-entries" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+          <!-- Rendered by JS -->
+        </div>
+        <button onclick="saveAllGalleriesToGitHub()" style="font-family:var(--font-body);font-size:13px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;padding:10px 22px;border-radius:var(--radius);border:none;background:var(--orange);color:var(--white);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--transition);">
+          <i class="fas fa-save"></i> Save All Gallery Links to GitHub
+        </button>
       </div>
     </div>
     <div class="tab-panel" id="panel-log">
@@ -1684,6 +1701,8 @@ function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
+  // Render gallery editor when manage tab is opened
+  if (name === 'manage') renderManageGalleryEditor();
 }
 
 // ── Toast ────────────────────────────────────────────────────
@@ -1920,21 +1939,27 @@ function renderStep() {
   updatePreview();
 }
 
-// Status strip — compact list of all photos and their completion state
+// Status strip — compact list with file size, size warning and per-item controls
 function renderStatusStrip() {
   const strip = document.getElementById('queue-status-strip');
   strip.innerHTML = '';
   uploadQueue.forEach((q, i) => {
-    const isComplete = q.meta.caption && q.meta.caption.trim();
+    const isComplete  = q.meta.caption && q.meta.caption.trim();
+    const sizeKB      = Math.round(q.file.size / 1024);
+    const sizeMB      = (q.file.size / 1048576).toFixed(1);
+    const sizeDisplay = sizeKB > 999 ? `${sizeMB} MB` : `${sizeKB} KB`;
+    const tooLarge    = q.file.size > 900000;
+
     const el = document.createElement('div');
     el.style.cssText = `display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;
-      background:${i === currentStep ? 'rgba(59,158,219,0.12)' : 'rgba(255,255,255,0.03)'};
-      border:1px solid ${i === currentStep ? 'rgba(59,158,219,0.3)' : 'rgba(255,255,255,0.05)'};`;
+      background:${i === currentStep ? 'rgba(59,158,219,0.12)' : tooLarge ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.03)'};
+      border:1px solid ${i === currentStep ? 'rgba(59,158,219,0.3)' : tooLarge ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.05)'};`;
 
-    const dotColor = q.status === 'done'      ? 'var(--success)'
-                   : q.status === 'error'     ? 'var(--error)'
-                   : q.status === 'uploading' ? 'var(--sky)'
-                   : isComplete               ? 'rgba(34,197,94,0.6)'
+    const dotColor = q.status === 'done'       ? 'var(--success)'
+                   : q.status === 'error'      ? 'var(--error)'
+                   : q.status === 'uploading'  ? 'var(--sky)'
+                   : tooLarge                  ? 'var(--warn)'
+                   : isComplete                ? 'rgba(34,197,94,0.6)'
                    : 'rgba(255,255,255,0.2)';
 
     el.innerHTML = `
@@ -1943,9 +1968,10 @@ function renderStatusStrip() {
         <div style="font-size:12px;font-weight:600;color:${i===currentStep?'var(--white)':'rgba(255,255,255,0.7)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           ${q.meta.caption || q.file.name}
         </div>
-        <div style="font-size:11px;color:var(--grey-500);">
-          ${q.meta.category || '—'} · ${q.meta.season || '—'} · ${q.status}
-          ${q.status === 'error' ? ' <span style="color:var(--error);">⚠ Failed — check file size (&lt;800KB)</span>' : ''}
+        <div style="font-size:11px;color:var(--grey-500);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>${q.meta.category || '—'} · ${q.meta.season || '—'} · ${q.status}</span>
+          <span style="font-family:var(--font-mono);color:${tooLarge ? 'var(--warn)' : 'var(--grey-500)'};">${sizeDisplay}${tooLarge ? ' ⚠ Too large — compress first' : ''}</span>
+          ${q.status === 'error' ? '<span style="color:var(--error);">Upload failed — check file size</span>' : ''}
         </div>
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0;">
@@ -1956,10 +1982,28 @@ function renderStatusStrip() {
       </div>`;
     strip.appendChild(el);
   });
-  // Update upload count to show only pending
+
+  // Update upload count — only pending non-oversized items
+  const readyCount = uploadQueue.filter(q => q.status === 'pending' && q.file.size <= 900000).length;
   const pendingCount = uploadQueue.filter(q => q.status === 'pending').length;
   const lbl = document.getElementById('upload-count-label');
-  if (lbl) lbl.textContent = `(${pendingCount})`;
+  if (lbl) lbl.textContent = `(${readyCount})`;
+
+  // Show warning if any oversized files
+  const oversized = uploadQueue.filter(q => q.file.size > 900000 && q.status === 'pending');
+  if (oversized.length > 0) {
+    const existing = document.getElementById('size-warning-banner');
+    if (!existing) {
+      const banner = document.createElement('div');
+      banner.id = 'size-warning-banner';
+      banner.style.cssText = 'background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:#fde68a;margin-top:10px;display:flex;align-items:flex-start;gap:8px;';
+      banner.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:var(--warn);margin-top:2px;flex-shrink:0;"></i><span><strong>${oversized.length} photo${oversized.length>1?'s are':' is'} over 900KB</strong> and will fail to upload. Please compress them first using Preview (Mac: File → Export → reduce quality) or the Compress Photos app on iPhone.</span>`;
+      strip.parentNode.insertBefore(banner, strip.nextSibling);
+    }
+  } else {
+    const existing = document.getElementById('size-warning-banner');
+    if (existing) existing.remove();
+  }
 }
 
 function removeQueueItem(idx) {
@@ -1970,6 +2014,14 @@ function removeQueueItem(idx) {
   }
   currentStep = Math.min(currentStep, uploadQueue.length - 1);
   renderStep();
+}
+
+function clearDone() {
+  uploadQueue = uploadQueue.filter(q => q.status !== 'done');
+  if (uploadQueue.length === 0) { resetUploader(); return; }
+  currentStep = Math.min(currentStep, uploadQueue.length - 1);
+  renderStep();
+  toast('Completed photos cleared from queue.', 'info');
 }
 
 function retryItem(idx) {
@@ -2029,9 +2081,19 @@ async function startUpload() {
 
   if (!store.get('token')) { toast('No GitHub token configured. Go to Setup first.', 'error'); return; }
 
-  // Only upload items that are still pending — skip done/error items unless explicitly retried
-  const pending = uploadQueue.filter(i => i.status === 'pending');
-  if (pending.length === 0) { toast('No pending photos to upload. Use Clear to start again.', 'error'); btn.disabled = false; return; }
+  // Block any oversized files and warn before attempting
+  const oversized = pending.filter(i => i.file.size > 900000);
+  if (oversized.length > 0) {
+    const names = oversized.map(i => `${i.file.name} (${Math.round(i.file.size/1024)}KB)`).join(', ');
+    toast(`${oversized.length} file${oversized.length>1?'s are':' is'} over 900KB and cannot be uploaded: ${names}. Please compress them first.`, 'error');
+    log(`Upload blocked — oversized files: ${names}`, 'error');
+    // Mark them as error immediately
+    oversized.forEach(i => i.status = 'error');
+    renderStatusStrip();
+    // Filter to only uploadable files
+    const uploadable = pending.filter(i => i.file.size <= 900000);
+    if (uploadable.length === 0) { btn.disabled = false; return; }
+  }
 
   // Check all pending have captions
   const missing = pending.filter(i => !i.meta.caption || !i.meta.caption.trim());
@@ -2082,6 +2144,7 @@ async function startUpload() {
       const queueIdx = uploadQueue.indexOf(item);
       const filename = generateFilename(m.category, m.season, m.opponent, m.date, item.file.name, queueIdx);
 
+      // Upload image to GitHub
       await uploadBase64Image(filename, base64, `Add photo: ${filename}`);
       log(`Uploaded: ${filename}`, 'success');
 
@@ -2102,8 +2165,15 @@ async function startUpload() {
 
     } catch (e) {
       item.status = 'error';
-      toast(`Failed: ${item.file.name} — ${e.message}`, 'error');
-      log(`Upload failed for ${item.file.name}: ${e.message}`, 'error');
+      // Provide specific error reason
+      let reason = e.message || 'Unknown error';
+      if (item.file.size > 900000) reason = `File too large (${Math.round(item.file.size/1024)}KB — max 900KB). Compress before uploading.`;
+      else if (reason.includes('401')) reason = 'GitHub token invalid or expired — go to Setup and re-enter token.';
+      else if (reason.includes('403')) reason = 'Permission denied — check token has Contents: Read & Write access.';
+      else if (reason.includes('422')) reason = 'File already exists with same name — will be overwritten on retry.';
+      else if (reason.includes('network') || reason.includes('fetch')) reason = 'Network error — check your internet connection.';
+      toast(`Failed: ${item.file.name} — ${reason}`, 'error');
+      log(`Upload failed for ${item.file.name}: ${reason}`, 'error');
     }
 
     renderStatusStrip();
@@ -2364,34 +2434,79 @@ async function loadLivePhotos() {
     livePhotos         = parsePhotosFromHTML(cachedIndexContent);
     document.getElementById('manage-filter-bar').style.display = 'flex';
     renderManageGrid();
+
+    // Fix 8 — update photo count in stats strip on media page
+    updatePhotoStatCount(livePhotos.length);
+
     log(`Loaded ${livePhotos.length} photos from media/index.html.`, 'info');
-    toast(`${livePhotos.length} photos loaded.`, 'success');
+    toast(`${livePhotos.length} photo${livePhotos.length !== 1 ? 's' : ''} loaded.`, 'success');
   } catch (e) {
     grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--error);">Failed to load: ${e.message}</div>`;
     log('Error loading photos: ' + e.message, 'error');
   }
 }
 
-// Parse photo items out of media/index.html HTML string
+// Fix 8 — update the photo count shown in the media page stats strip
+function updatePhotoStatCount(count) {
+  // This updates the PHOTO_GALLERIES count display in the admin panel preview only
+  // The actual stat on the media page is auto-counted by JS from photo-item elements
+  const badge = document.querySelector('.topbar-token-status');
+  if (badge) {
+    // Show photo count in topbar as a quick reference
+    const existing = document.getElementById('topbar-photo-count');
+    if (!existing) {
+      const span = document.createElement('span');
+      span.id = 'topbar-photo-count';
+      span.style.cssText = 'font-family:var(--font-mono);font-size:11px;color:var(--grey-500);margin-left:8px;';
+      span.textContent = `${count} photo${count !== 1 ? 's' : ''} live`;
+      badge.parentNode.insertBefore(span, badge.nextSibling);
+    } else {
+      existing.textContent = `${count} photo${count !== 1 ? 's' : ''} live`;
+    }
+  }
+}
+
+// Parse photo items out of media/index.html — robust multi-format matcher
 function parsePhotosFromHTML(html) {
   const photos = [];
-  // Match each photo-item div block
-  const blockRe = /<div\s+class="photo-item"([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
+  // Match every photo-item div regardless of indentation or attribute order
+  // Strategy: find opening tag, then grab everything until the triple-closing-div pattern
+  const openRe = /<div[^>]+class="photo-item"[^>]*>/g;
   let match;
-  while ((match = blockRe.exec(html)) !== null) {
-    const block     = match[0];
-    const catMatch  = /data-cat="([^"]*)"/.exec(block);
-    const seasMatch = /data-season="([^"]*)"/.exec(block);
-    const capMatch  = /data-caption="([^"]*)"/.exec(block);
-    const subMatch  = /data-sub="([^"]*)"/.exec(block);
-    const srcMatch  = /src="([^"]*assets\/img\/photos\/[^"]*)"/.exec(block);
+  while ((match = openRe.exec(html)) !== null) {
+    const start = match.index;
+    // Find the end: photo-item contains 3 nested divs (overlay, caption, sub + expand)
+    // Walk forward counting div opens/closes to find the matching close
+    let depth = 0, pos = start, end = -1;
+    while (pos < html.length) {
+      const nextOpen  = html.indexOf('<div', pos);
+      const nextClose = html.indexOf('</div>', pos);
+      if (nextClose === -1) break;
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth++;
+        pos = nextOpen + 4;
+      } else {
+        depth--;
+        pos = nextClose + 6;
+        if (depth === 0) { end = pos; break; }
+      }
+    }
+    if (end === -1) continue;
+    const block = html.slice(start, end);
+
+    const catM   = /data-cat="([^"]*)"/.exec(block);
+    const seasM  = /data-season="([^"]*)"/.exec(block);
+    const capM   = /data-caption="([^"]*)"/.exec(block);
+    const subM   = /data-sub="([^"]*)"/.exec(block);
+    const srcM   = /src="([^"]*(?:assets\/img\/photos|img\/photos)[^"]*)"/.exec(block);
+
     photos.push({
       raw:     block,
-      cat:     catMatch  ? catMatch[1]  : '',
-      season:  seasMatch ? seasMatch[1] : '',
-      caption: capMatch  ? capMatch[1]  : '(no caption)',
-      sub:     subMatch  ? subMatch[1]  : '',
-      src:     srcMatch  ? srcMatch[1]  : '',
+      cat:     catM  ? catM[1]  : '',
+      season:  seasM ? seasM[1] : '',
+      caption: capM  ? capM[1]  : '(no caption)',
+      sub:     subM  ? subM[1]  : '',
+      src:     srcM  ? srcM[1]  : '',
     });
   }
   return photos;
@@ -2514,6 +2629,64 @@ async function replacePhoto(idx, file) {
   } catch (e) {
     toast('Replace failed: ' + e.message, 'error');
     log('Replace failed: ' + e.message, 'error');
+  }
+}
+// Render gallery quick editor in Manage tab
+function renderManageGalleryEditor() {
+  const container = document.getElementById('manage-gallery-entries');
+  if (!container) return;
+  container.innerHTML = '';
+  SEASONS_DATA.forEach((season, si) => {
+    const seasonBlock = document.createElement('div');
+    seasonBlock.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius);padding:14px 16px;';
+    seasonBlock.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${season.galleries.length > 0 ? '12px' : '0'};">
+        <span style="font-family:var(--font-display);font-size:22px;color:var(--white);line-height:1;">${season.year}</span>
+        ${season.current ? '<span style="font-family:var(--font-mono);font-size:10px;background:var(--orange);color:var(--white);padding:2px 7px;border-radius:4px;letter-spacing:0.08em;">CURRENT</span>' : ''}
+        <span style="font-size:12px;color:var(--grey-500);margin-left:auto;">${season.galleries.length} ${season.galleries.length === 1 ? 'gallery' : 'galleries'}</span>
+        <button onclick="addGalleryEntryManage(${si})" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px dashed rgba(59,158,219,0.3);background:transparent;color:var(--sky);cursor:pointer;font-family:var(--font-body);font-weight:600;white-space:nowrap;">+ Add</button>
+      </div>
+      <div id="manage-gallery-season-${si}">
+        ${season.galleries.map((g, gi) => `
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;">
+            <input type="text" value="${g.name || ''}" placeholder="Gallery name"
+              style="font-family:var(--font-body);font-size:13px;color:var(--white);background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;outline:none;"
+              onchange="SEASONS_DATA[${si}].galleries[${gi}].name=this.value;saveSeasonsLocally();">
+            <input type="url" value="${g.url || ''}" placeholder="Lightroom / Google Photos URL"
+              style="font-family:var(--font-body);font-size:13px;color:var(--white);background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;outline:none;"
+              onchange="SEASONS_DATA[${si}].galleries[${gi}].url=this.value;saveSeasonsLocally();">
+            <button onclick="removeGalleryEntry(${si},${gi});renderManageGalleryEditor();" style="width:30px;height:30px;border-radius:6px;border:1px solid rgba(239,68,68,0.25);background:transparent;color:rgba(239,68,68,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>`).join('')}
+      </div>`;
+    container.appendChild(seasonBlock);
+  });
+}
+
+function addGalleryEntryManage(si) {
+  SEASONS_DATA[si].galleries.push({ name: '', url: '' });
+  saveSeasonsLocally();
+  renderManageGalleryEditor();
+  renderSeasonAccordion();
+}
+
+async function saveAllGalleriesToGitHub() {
+  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  toast('Fetching media/index.html…', 'info');
+  try {
+    const indexFile = await githubGet('media/index.html');
+    let content     = decodeURIComponent(escape(atob(indexFile.content.replace(/\n/g, ''))));
+    const newArray  = buildPhotoGalleriesJS();
+    const regex     = /const PHOTO_GALLERIES\s*=\s*\[[^\]]*?\];/s;
+    if (!regex.test(content)) { toast('Could not find PHOTO_GALLERIES in index.html.', 'error'); return; }
+    content = content.replace(regex, newArray);
+    await githubPut('media/index.html', content, 'Update all season gallery links', indexFile.sha);
+    toast('All gallery links saved to GitHub!', 'success');
+    log('All season gallery links updated in media/index.html.', 'success');
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+    log('Error saving gallery links: ' + e.message, 'error');
   }
 }
 
