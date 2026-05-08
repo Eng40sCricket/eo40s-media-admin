@@ -2081,19 +2081,32 @@ async function startUpload() {
 
   if (!store.get('token')) { toast('No GitHub token configured. Go to Setup first.', 'error'); return; }
 
-  // Block any oversized files and warn before attempting
+  // Only upload items that are still pending — skip done items
+  const pending = uploadQueue.filter(i => i.status === 'pending');
+  if (pending.length === 0) { toast('No pending photos to upload. Use Clear All to start again.', 'error'); btn.disabled = false; return; }
+
+  // Check all pending have captions
+  const missing = pending.filter(i => !i.meta.caption || !i.meta.caption.trim());
+  if (missing.length > 0) {
+    toast(`${missing.length} photo${missing.length > 1 ? 's are' : ' is'} missing a caption.`, 'error');
+    currentStep = uploadQueue.indexOf(missing[0]);
+    renderStep();
+    btn.disabled = false;
+    return;
+  }
+
+  // Warn about oversized but don't block — mark them as error and skip
   const oversized = pending.filter(i => i.file.size > 900000);
   if (oversized.length > 0) {
-    const names = oversized.map(i => `${i.file.name} (${Math.round(i.file.size/1024)}KB)`).join(', ');
-    toast(`${oversized.length} file${oversized.length>1?'s are':' is'} over 900KB and cannot be uploaded: ${names}. Please compress them first.`, 'error');
-    log(`Upload blocked — oversized files: ${names}`, 'error');
-    // Mark them as error immediately
-    oversized.forEach(i => i.status = 'error');
+    oversized.forEach(i => { i.status = 'error'; });
     renderStatusStrip();
-    // Filter to only uploadable files
-    const uploadable = pending.filter(i => i.file.size <= 900000);
-    if (uploadable.length === 0) { btn.disabled = false; return; }
+    toast(`${oversized.length} file${oversized.length>1?'s are':' is'} over 900KB and will be skipped. Compress them first.`, 'error');
+    log(`Skipped ${oversized.length} oversized file(s).`, 'error');
   }
+
+  // Get the actually uploadable set
+  const uploadable = pending.filter(i => i.file.size <= 900000);
+  if (uploadable.length === 0) { toast('No uploadable photos — all files are over 900KB. Please compress them first.', 'error'); btn.disabled = false; return; }
 
   // Check all pending have captions
   const missing = pending.filter(i => !i.meta.caption || !i.meta.caption.trim());
@@ -2113,10 +2126,11 @@ async function startUpload() {
   const labelEl    = document.getElementById('progress-label');
   progressEl.style.display = 'block';
 
-  // Fetch media/index.html once
+  // Fetch media/index.html once before the loop
   let indexFile, indexSha, indexContent;
   try {
     toast('Fetching media/index.html…', 'info');
+    log('Starting upload of ' + uploadable.length + ' photo(s)…', 'info');
     indexFile    = await githubGet('media/index.html');
     indexSha     = indexFile.sha;
     indexContent = decodeURIComponent(escape(atob(indexFile.content.replace(/\n/g, ''))));
@@ -2129,14 +2143,14 @@ async function startUpload() {
 
   let done = 0;
 
-  for (let i = 0; i < pending.length; i++) {
-    const item = pending[i];
+  for (let i = 0; i < uploadable.length; i++) {
+    const item = uploadable[i];
     const m    = item.meta;
     item.status = 'uploading';
     renderStatusStrip();
 
-    labelEl.textContent = `Uploading ${i + 1} of ${pending.length}: ${item.file.name}`;
-    fillEl.style.width  = (i / pending.length * 70) + '%';
+    labelEl.textContent = `Uploading ${i + 1} of ${uploadable.length}: ${item.file.name}`;
+    fillEl.style.width  = ((i + 1) / uploadable.length * 70) + '%';
 
     try {
       const base64   = await fileToBase64(item.file);
