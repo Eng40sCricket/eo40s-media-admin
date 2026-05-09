@@ -2070,8 +2070,9 @@ function generateFilename(cat, season, opponent, date, originalName, idx = 0) {
   const parts = [cat, season];
   if (opponent) parts.push(opponent.toLowerCase().replace(/[^a-z0-9]/g, '-'));
   if (date)     parts.push(date.replace(/-/g, ''));
-  // Always append a unique counter so no two files ever overwrite each other
-  parts.push(String(idx + 1).padStart(2, '0'));
+  // Timestamp + index guarantees every file is unique — no overwrites ever
+  const unique = Date.now().toString(36) + idx.toString(36);
+  parts.push(unique);
   return parts.join('-') + '.' + ext;
 }
 
@@ -2386,7 +2387,7 @@ async function saveSeasonToGitHub(seasonIdx) {
   const newArray = buildPhotoGalleriesJS();
 
   // Replace the existing PHOTO_GALLERIES block
-  const regex = /const PHOTO_GALLERIES\s*=\s*\[[^\]]*?\];/s;
+  const regex = /const PHOTO_GALLERIES\s*=\s*\[[\s\S]*?\];/;
   if (regex.test(indexContent)) {
     indexContent = indexContent.replace(regex, newArray);
   } else {
@@ -2410,7 +2411,7 @@ function buildPhotoGalleriesJS() {
     const galStr = s.galleries.map(g =>
       `{ name: ${JSON.stringify(g.name || '')}, url: ${JSON.stringify(g.url || '#')} }`
     ).join(', ');
-    return `    { year: ${s.year}, galleries: [${galStr}], url: ${JSON.stringify(s.galleries[0]?.url || '#')}, current: ${s.current} }`;
+    return `            { year: ${s.year}, galleries: [${galStr}], current: ${s.current} }`;
   });
   return `const PHOTO_GALLERIES = [\n${lines.join(',\n')}\n        ];`;
 }
@@ -2569,18 +2570,33 @@ function renderManageGrid() {
 
 async function removePhoto(idx) {
   if (!confirm(`Remove "${livePhotos[idx].caption}" from the media page?`)) return;
-  if (!cachedIndexContent) { toast('Please refresh first.', 'error'); return; }
+  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
 
-  const photo  = livePhotos[idx];
-  const newHtml = cachedIndexContent.replace(photo.raw, '');
+  const photo = livePhotos[idx];
 
   try {
-    toast('Removing photo…', 'info');
+    toast('Fetching latest version from GitHub…', 'info');
+    // Always re-fetch to get the current SHA — prevents stale SHA mismatch errors
+    const fresh        = await githubGet('media/index.html');
+    cachedIndexSha     = fresh.sha;
+    cachedIndexContent = decodeURIComponent(escape(atob(fresh.content.replace(/\n/g, ''))));
+
+    // Re-parse to find the current raw block (it may have shifted since last refresh)
+    const freshPhotos  = parsePhotosFromHTML(cachedIndexContent);
+    const freshPhoto   = freshPhotos.find(p => p.caption === photo.caption && p.src === photo.src);
+    if (!freshPhoto) {
+      toast('Photo not found in current file — try refreshing from GitHub first.', 'error');
+      return;
+    }
+
+    const newHtml = cachedIndexContent.replace(freshPhoto.raw, '');
     await githubPut('media/index.html', newHtml, `Remove photo: ${photo.caption}`, cachedIndexSha);
-    cachedIndexContent = newHtml;
-    // Get new SHA
-    const updated  = await githubGet('media/index.html');
-    cachedIndexSha = updated.sha;
+
+    // Update cache with new SHA
+    const updated      = await githubGet('media/index.html');
+    cachedIndexSha     = updated.sha;
+    cachedIndexContent = decodeURIComponent(escape(atob(updated.content.replace(/\n/g, ''))));
+
     livePhotos.splice(idx, 1);
     renderManageGrid();
     toast(`"${photo.caption}" removed from the media page.`, 'success');
@@ -2593,39 +2609,46 @@ async function removePhoto(idx) {
 
 async function replacePhoto(idx, file) {
   if (!file) return;
-  if (!cachedIndexContent) { toast('Please refresh first.', 'error'); return; }
+  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
   if (file.size > 900000) {
     toast('File too large — please compress to under 900KB first.', 'error');
     return;
   }
 
-  const photo    = livePhotos[idx];
-  const cfg      = getConfig();
-  const ext      = file.name.split('.').pop().toLowerCase();
-  const newFilename = photo.src
-    ? photo.src.replace('../assets/img/photos/', '').replace(/\.[^.]+$/, '-replaced.' + ext)
-    : `${photo.cat}-${photo.season}-replaced-${Date.now()}.${ext}`;
+  const photo = livePhotos[idx];
+  const ext   = file.name.split('.').pop().toLowerCase();
+  const unique = Date.now().toString(36);
+  const newFilename = `${photo.cat}-${photo.season}-replaced-${unique}.${ext}`;
 
   try {
-    toast(`Uploading replacement image…`, 'info');
+    toast('Uploading replacement image…', 'info');
     const base64 = await fileToBase64(file);
     await uploadBase64Image(newFilename, base64, `Replace photo: ${photo.caption}`);
 
-    // Update the src in the HTML
+    // Always re-fetch fresh SHA before editing HTML
+    toast('Updating media page…', 'info');
+    const fresh        = await githubGet('media/index.html');
+    cachedIndexSha     = fresh.sha;
+    cachedIndexContent = decodeURIComponent(escape(atob(fresh.content.replace(/\n/g, ''))));
+
     let newHtml = cachedIndexContent;
     if (photo.src) {
-      newHtml = newHtml.replace(photo.src, `../assets/img/photos/${newFilename}`);
+      const oldSrc = photo.src.replace('../', '');
+      newHtml = newHtml.replace(
+        new RegExp(oldSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        `assets/img/photos/${newFilename}`
+      );
     }
 
     await githubPut('media/index.html', newHtml, `Replace image for: ${photo.caption}`, cachedIndexSha);
-    cachedIndexContent    = newHtml;
-    livePhotos[idx].src   = `../assets/img/photos/${newFilename}`;
 
-    const updated  = await githubGet('media/index.html');
-    cachedIndexSha = updated.sha;
+    const updated      = await githubGet('media/index.html');
+    cachedIndexSha     = updated.sha;
+    cachedIndexContent = decodeURIComponent(escape(atob(updated.content.replace(/\n/g, ''))));
+    livePhotos[idx].src = `../assets/img/photos/${newFilename}`;
 
     renderManageGrid();
-    toast(`Photo replaced successfully!`, 'success');
+    toast('Photo replaced successfully!', 'success');
     log(`Replaced image for: ${photo.caption} → ${newFilename}`, 'success');
   } catch (e) {
     toast('Replace failed: ' + e.message, 'error');
@@ -2679,7 +2702,7 @@ async function saveAllGalleriesToGitHub() {
     const indexFile = await githubGet('media/index.html');
     let content     = decodeURIComponent(escape(atob(indexFile.content.replace(/\n/g, ''))));
     const newArray  = buildPhotoGalleriesJS();
-    const regex     = /const PHOTO_GALLERIES\s*=\s*\[[^\]]*?\];/s;
+    const regex = /const PHOTO_GALLERIES\s*=\s*\[[\s\S]*?\];/;
     if (!regex.test(content)) { toast('Could not find PHOTO_GALLERIES in index.html.', 'error'); return; }
     content = content.replace(regex, newArray);
     await githubPut('media/index.html', content, 'Update all season gallery links', indexFile.sha);
