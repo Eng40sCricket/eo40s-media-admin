@@ -844,7 +844,7 @@ body {
 
 .gallery-entry {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 88px 1fr 1fr auto;
   gap: 10px;
   align-items: center;
   background: rgba(255,255,255,0.03);
@@ -854,6 +854,38 @@ body {
 }
 
 @media (max-width: 600px) { .gallery-entry { grid-template-columns: 1fr; } }
+
+/* Cover image thumb in gallery entry */
+.gallery-cover-thumb {
+  width: 88px; height: 58px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--navy-light);
+  display: block;
+  cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  transition: border-color var(--transition);
+}
+.gallery-cover-thumb:hover { border-color: var(--sky); }
+.gallery-cover-placeholder {
+  width: 88px; height: 58px;
+  border-radius: 6px;
+  background: var(--navy-light);
+  border: 1.5px dashed rgba(255,255,255,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.gallery-cover-placeholder:hover { border-color: var(--sky); background: rgba(59,158,219,0.08); }
+.gallery-cover-placeholder i { font-size: 1em; color: rgba(255,255,255,0.25); }
+.gallery-cover-placeholder span { font-size: 9px; color: rgba(255,255,255,0.25); text-transform: uppercase; letter-spacing: 0.06em; }
+.gallery-cover-placeholder input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 
 .gallery-entry-input {
   font-family: var(--font-body);
@@ -2282,6 +2314,13 @@ function renderSeasonAccordion() {
 
 function galleryEntryHTML(seasonIdx, galleryIdx, gallery = {}) {
   return `<div class="gallery-entry" id="entry-${seasonIdx}-${galleryIdx}">
+    <label class="gallery-cover-placeholder" id="cover-label-${seasonIdx}-${galleryIdx}" title="Upload cover image">
+      ${gallery.coverUrl
+        ? `<img class="gallery-cover-thumb" src="${gallery.coverUrl}" alt="Cover">`
+        : `<i class="fas fa-image"></i><span>Cover</span>`}
+      <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
+             onchange="uploadGalleryCover(${seasonIdx}, ${galleryIdx}, this.files[0])">
+    </label>
     <input class="gallery-entry-input" type="text"
            placeholder="Gallery name (e.g. vs India · May 2026)"
            value="${gallery.name || ''}"
@@ -2322,6 +2361,44 @@ function updateEntry(seasonIdx, galleryIdx, field, value) {
   SEASONS_DATA[seasonIdx].galleries[galleryIdx][field] = value;
   saveSeasonsLocally();
   renderGalleryPreview();
+}
+
+async function uploadGalleryCover(seasonIdx, galleryIdx, file) {
+  if (!file) return;
+  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  if (file.size > 900000) { toast('Cover image must be under 900KB. Please compress first.', 'error'); return; }
+
+  const gallery  = SEASONS_DATA[seasonIdx].galleries[galleryIdx];
+  const ext      = file.name.split('.').pop().toLowerCase();
+  const unique   = Date.now().toString(36);
+  const filename = `gallery-cover-${SEASONS_DATA[seasonIdx].year}-${unique}.${ext}`;
+
+  try {
+    toast('Uploading cover image…', 'info');
+    const base64 = await fileToBase64(file);
+    await uploadBase64Image(filename, base64, `Add gallery cover: ${filename}`);
+
+    // Store the cover URL in SEASONS_DATA
+    const cfg = getConfig();
+    const coverUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/main/assets/img/photos/${filename}`;
+    SEASONS_DATA[seasonIdx].galleries[galleryIdx].coverUrl = coverUrl;
+    SEASONS_DATA[seasonIdx].galleries[galleryIdx].coverFile = filename;
+    saveSeasonsLocally();
+
+    // Update the label to show the thumbnail
+    const label = document.getElementById(`cover-label-${seasonIdx}-${galleryIdx}`);
+    if (label) {
+      label.innerHTML = `<img class="gallery-cover-thumb" src="${coverUrl}" alt="Cover">
+        <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
+               onchange="uploadGalleryCover(${seasonIdx}, ${galleryIdx}, this.files[0])">`;
+    }
+
+    toast('Cover image uploaded! Save to GitHub to publish.', 'success');
+    log(`Gallery cover uploaded: ${filename}`, 'success');
+  } catch (e) {
+    toast('Cover upload failed: ' + e.message, 'error');
+    log('Cover upload failed: ' + e.message, 'error');
+  }
 }
 
 function toggleCurrent(idx) {
@@ -2408,9 +2485,15 @@ async function saveSeasonToGitHub(seasonIdx) {
 
 function buildPhotoGalleriesJS() {
   const lines = SEASONS_DATA.map(s => {
-    const galStr = s.galleries.map(g =>
-      `{ name: ${JSON.stringify(g.name || '')}, url: ${JSON.stringify(g.url || '#')} }`
-    ).join(', ');
+    const galStr = s.galleries.map(g => {
+      const parts = [
+        `name: ${JSON.stringify(g.name || '')}`,
+        `url: ${JSON.stringify(g.url || '#')}`,
+      ];
+      if (g.coverUrl)  parts.push(`coverUrl: ${JSON.stringify(g.coverUrl)}`);
+      if (g.coverFile) parts.push(`coverFile: ${JSON.stringify(g.coverFile)}`);
+      return `{ ${parts.join(', ')} }`;
+    }).join(', ');
     return `            { year: ${s.year}, galleries: [${galStr}], current: ${s.current} }`;
   });
   return `const PHOTO_GALLERIES = [\n${lines.join(',\n')}\n        ];`;
