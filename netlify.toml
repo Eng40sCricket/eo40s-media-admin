@@ -1,0 +1,14 @@
+# Netlify configuration
+# England Over 40s Cricket — Media Admin
+#
+# The site is plain static files served from the repository root.
+# One serverless function (netlify/functions/media-admin.js) holds the
+# GitHub token server-side so it never reaches the browser, and limits
+# all access to media/index.html and assets/img/photos/.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
