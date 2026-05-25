@@ -1252,14 +1252,14 @@ body {
     </div>
     <div class="login-form">
       <div class="field-group">
-        <label class="field-label">Password</label>
-        <input type="password" class="field-input" id="password-input" placeholder="Enter admin password" autocomplete="current-password">
+        <label class="field-label">Admin PIN</label>
+        <input type="password" class="field-input" id="pin-input" placeholder="Enter admin PIN" autocomplete="current-password" inputmode="numeric">
       </div>
-      <button class="btn-primary" onclick="attemptLogin()">
+      <button class="btn-primary" id="login-btn" onclick="attemptLogin()">
         <i class="fas fa-unlock-alt"></i> Access Panel
       </button>
       <div class="login-error" id="login-error">
-        <i class="fas fa-exclamation-circle"></i> Incorrect password. Please try again.
+        <i class="fas fa-exclamation-circle"></i> Incorrect PIN. Please try again.
       </div>
     </div>
   </div>
@@ -1277,8 +1277,8 @@ body {
     </div>
     <div class="topbar-right">
       <div class="topbar-token-status">
-        <div class="token-dot" id="token-dot"></div>
-        <span id="token-status-label">No token</span>
+        <div class="token-dot connected"></div>
+        <span>Signed in</span>
       </div>
       <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
     </div>
@@ -1309,64 +1309,23 @@ body {
     <div class="tab-panel active" id="panel-setup">
       <div class="panel-header">
         <div class="panel-title">Setup & <span>Configuration</span></div>
-        <div class="panel-sub">Configure your GitHub token and repository settings. You only need to do this once.</div>
-      </div>
-
-      <div class="setup-grid">
-        <div class="setup-card">
-          <div class="setup-card-title">GitHub Token</div>
-          <div class="setup-card-sub">A fine-grained Personal Access Token scoped to the eng40s-website repository. Required for all uploads and file edits.</div>
-          <div class="field-group">
-            <label class="field-label">Personal Access Token</label>
-            <input type="password" class="field-input" id="github-token" placeholder="github_pat_…">
-          </div>
-          <button class="btn-save" onclick="saveToken()"><i class="fas fa-save"></i> Save Token</button>
-          <div class="warn-box">
-            <i class="fas fa-exclamation-triangle"></i>
-            Create a <strong>fine-grained token</strong> at github.com → Settings → Developer Settings → Personal Access Tokens. Scope it to <strong>Eng40sCricket/eng40s-website</strong> only, with Contents: Read & Write permission. The token is stored in your browser only.
-          </div>
-        </div>
-
-        <div class="setup-card">
-          <div class="setup-card-title">Repository Settings</div>
-          <div class="setup-card-sub">These are pre-configured for the England Over 40s website. Only change if your repo structure changes.</div>
-          <div class="field-group">
-            <label class="field-label">GitHub Owner</label>
-            <input type="text" class="field-input" id="cfg-owner" value="Eng40sCricket">
-          </div>
-          <div class="field-group">
-            <label class="field-label">Repository Name</label>
-            <input type="text" class="field-input" id="cfg-repo" value="eng40s-website">
-          </div>
-          <div class="field-group">
-            <label class="field-label">Branch</label>
-            <input type="text" class="field-input" id="cfg-branch" value="main">
-          </div>
-          <div class="field-group">
-            <label class="field-label">Photo folder path</label>
-            <input type="text" class="field-input" id="cfg-photo-path" value="assets/img/photos">
-          </div>
-          <button class="btn-save" onclick="saveConfig()"><i class="fas fa-save"></i> Save Settings</button>
-        </div>
+        <div class="panel-sub">This tool is configured on the server — there is nothing to set up in the browser.</div>
       </div>
 
       <div class="setup-card">
-        <div class="setup-card-title">Admin Password</div>
-        <div class="setup-card-sub">Change the password used to access this admin panel.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end;">
-          <div class="field-group" style="margin:0">
-            <label class="field-label">New Password</label>
-            <input type="password" class="field-input" id="new-password" placeholder="Enter new password">
-          </div>
-          <div class="field-group" style="margin:0">
-            <label class="field-label">Confirm Password</label>
-            <input type="password" class="field-input" id="confirm-password" placeholder="Confirm new password">
-          </div>
-          <button class="btn-save" style="margin:0" onclick="changePassword()"><i class="fas fa-key"></i> Update</button>
+        <div class="setup-card-title">Secured — Configured Server-Side</div>
+        <div class="setup-card-sub">The GitHub token and the admin PIN are held on Netlify, never in this page.</div>
+        <div class="info-box" style="margin-top:4px;">
+          <i class="fas fa-shield-alt"></i>
+          This panel no longer stores a GitHub token in your browser. Every save is made through a secure Netlify function that holds the token and is limited to the media gallery files only — <strong>media/index.html</strong> and the <strong>assets/img/photos</strong> folder.
+        </div>
+        <div class="info-box" style="margin-top:14px;">
+          <i class="fas fa-key"></i>
+          To change the <strong>admin PIN</strong>, or to renew the <strong>GitHub token</strong> when it expires, update the environment variables on the Netlify site (<code>ADMIN_PIN</code> and <code>GITHUB_TOKEN</code>). The deployment runbook has the steps.
         </div>
         <div class="info-box" style="margin-top:14px;">
           <i class="fas fa-info-circle"></i>
-          The default password is <strong>EO40s2026!</strong> — change this before using the panel. Passwords are stored in your browser only.
+          Repository <strong>Eng40sCricket/eng40s-website</strong>, branch <strong>main</strong>. These are fixed in the function and only change if the site is restructured.
         </div>
       </div>
     </div>
@@ -1597,7 +1556,7 @@ body {
         <div class="activity-log" id="activity-log">
           <div class="log-entry info">
             <span class="log-time">--:--</span>
-            <span class="log-msg">Admin panel loaded. Configure your GitHub token in Setup to get started.</span>
+            <span class="log-msg">Admin panel loaded.</span>
           </div>
         </div>
       </div>
@@ -1613,11 +1572,10 @@ body {
 /* ============================================================
    CONFIG & STATE
    ============================================================
-   DEFAULT_PASSWORD — change after first login via Setup tab
-   SEASONS_DATA     — edit to match your current seasons
+   No GitHub token or password is stored here. The admin PIN is
+   verified server-side by the Netlify function; SEASONS_DATA is
+   the in-browser working copy of the gallery list.
 ============================================================ */
-const DEFAULT_PASSWORD = 'EO40s2026!';
-
 let SEASONS_DATA = [
   { year: 2026, current: true,  galleries: [] },
   { year: 2025, current: false, galleries: [] },
@@ -1625,7 +1583,18 @@ let SEASONS_DATA = [
   { year: 2023, current: false, galleries: [] },
 ];
 
-// ── Storage helpers ──────────────────────────────────────────
+/* ============================================================
+   No GitHub token lives in this page. It is held server-side in
+   the Netlify function (netlify/functions/media-admin.js), which
+   also limits all access to media/index.html and the photos
+   folder. This page only ever sends the admin PIN.
+   ============================================================ */
+const FUNCTION_URL = '/.netlify/functions/media-admin';
+
+// Held in memory only, for the length of the session.
+let sessionPin = null;
+
+// ── Storage helpers (UI state only — never any secret) ───────
 const store = {
   get: k => { try { return JSON.parse(localStorage.getItem('eo40s_' + k)); } catch { return null; } },
   set: (k, v) => localStorage.setItem('eo40s_' + k, JSON.stringify(v)),
@@ -1633,98 +1602,76 @@ const store = {
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
-  if (!store.get('password')) store.set('password', DEFAULT_PASSWORD);
   const saved = store.get('seasons');
   if (saved) SEASONS_DATA = saved;
-  const token = store.get('token');
-  updateTokenStatus(!!token);
-  const cfg = store.get('config');
-  if (cfg) {
-    if (cfg.owner)     document.getElementById('cfg-owner').value     = cfg.owner;
-    if (cfg.repo)      document.getElementById('cfg-repo').value      = cfg.repo;
-    if (cfg.branch)    document.getElementById('cfg-branch').value    = cfg.branch;
-    if (cfg.photoPath) document.getElementById('cfg-photo-path').value = cfg.photoPath;
-  }
 })();
 
-// ── Auth ─────────────────────────────────────────────────────
-function attemptLogin() {
-  const val = document.getElementById('password-input').value;
-  if (val === store.get('password')) {
+// ── Backend call — every GitHub read and write goes through here ──
+async function callBackend(payload) {
+  let res;
+  try {
+    res = await fetch(FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    throw new Error('Could not reach the server. Check your connection.');
+  }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    const err = new Error(data.error || ('Request failed (' + res.status + ').'));
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+// ── Auth — the PIN is verified server-side by the function ───
+async function attemptLogin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  if (!pin) return;
+  const btn   = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  const label = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking…';
+  try {
+    await callBackend({ action: 'ping', pin: pin });
+    sessionPin = pin;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-screen').style.display = 'block';
     renderSeasonAccordion();
     renderGalleryPreview();
-    log('Logged in successfully.', 'success');
-  } else {
-    document.getElementById('login-error').style.display = 'block';
+    log('Signed in successfully.', 'success');
+  } catch (err) {
+    errEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' +
+      (err.status === 401 ? 'Incorrect PIN. Please try again.'
+                          : (err.message || 'Could not connect. Please try again.'));
+    errEl.style.display = 'block';
+    document.getElementById('pin-input').value = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = label;
   }
 }
 
-document.getElementById('password-input').addEventListener('keydown', e => {
+document.getElementById('pin-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') attemptLogin();
 });
 
 function logout() {
+  sessionPin = null;
   document.getElementById('admin-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('password-input').value = '';
+  document.getElementById('pin-input').value = '';
 }
 
-function changePassword() {
-  const np = document.getElementById('new-password').value;
-  const cp = document.getElementById('confirm-password').value;
-  if (!np) { toast('Enter a new password.', 'error'); return; }
-  if (np !== cp) { toast('Passwords do not match.', 'error'); return; }
-  store.set('password', np);
-  document.getElementById('new-password').value = '';
-  document.getElementById('confirm-password').value = '';
-  toast('Password updated successfully.', 'success');
-  log('Admin password changed.', 'info');
-}
-
-// ── Setup ────────────────────────────────────────────────────
-function saveToken() {
-  const t = document.getElementById('github-token').value.trim();
-  if (!t) { toast('Enter a GitHub token.', 'error'); return; }
-  store.set('token', t);
-  document.getElementById('github-token').value = '';
-  updateTokenStatus(true);
-  toast('GitHub token saved.', 'success');
-  log('GitHub token saved to browser storage.', 'info');
-}
-
-function saveConfig() {
-  store.set('config', {
-    owner:     document.getElementById('cfg-owner').value.trim(),
-    repo:      document.getElementById('cfg-repo').value.trim(),
-    branch:    document.getElementById('cfg-branch').value.trim(),
-    photoPath: document.getElementById('cfg-photo-path').value.trim(),
-  });
-  toast('Settings saved.', 'success');
-  log('Repository configuration saved.', 'info');
-}
-
-function updateTokenStatus(connected) {
-  const dot   = document.getElementById('token-dot');
-  const label = document.getElementById('token-status-label');
-  if (connected) {
-    dot.className = 'token-dot connected';
-    label.textContent = 'Token configured';
-  } else {
-    dot.className = 'token-dot';
-    label.textContent = 'No token — go to Setup';
-  }
-}
-
+// ── Repository — fixed; configured server-side in the function ──
 function getConfig() {
-  const saved = store.get('config') || {};
-  return {
-    owner:     saved.owner     || 'Eng40sCricket',
-    repo:      saved.repo      || 'eng40s-website',
-    branch:    saved.branch    || 'main',
-    photoPath: saved.photoPath || 'assets/img/photos',
-  };
+  return { owner: 'Eng40sCricket', repo: 'eng40s-website', branch: 'main', photoPath: 'assets/img/photos' };
 }
 
 // ── Tab switching ────────────────────────────────────────────
@@ -1768,70 +1715,31 @@ function clearLog() {
   toast('Log cleared.', 'info');
 }
 
-// ── GitHub API ───────────────────────────────────────────────
+// ── GitHub access — all routed through the Netlify function ──
 async function githubGet(path) {
-  const cfg = getConfig();
-  const token = store.get('token');
-  const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch}`, {
-    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' }
-  });
-  if (!res.ok) throw new Error(`GitHub GET failed: ${res.status} ${res.statusText}`);
-  return res.json();
+  // Returns { sha, content } with content base64-encoded — the same
+  // shape the rest of this file already expects from the GitHub API.
+  return callBackend({ action: 'getFile', pin: sessionPin, path: path });
 }
 
 async function githubPut(path, content, message, sha = null) {
-  const cfg = getConfig();
-  const token = store.get('token');
-  const body = { message, content: btoa(unescape(encodeURIComponent(content))), branch: cfg.branch };
-  if (sha) body.sha = sha;
-  const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `GitHub PUT failed: ${res.status}`);
-  }
-  return res.json();
+  // content is plain text (e.g. media/index.html) — encode to base64.
+  const payload = {
+    action: 'putFile', pin: sessionPin, path: path,
+    contentBase64: btoa(unescape(encodeURIComponent(content))), message: message
+  };
+  if (sha) payload.sha = sha;
+  return callBackend(payload);
 }
 
 async function uploadBase64Image(filename, base64Data, message) {
-  const cfg = getConfig();
-  const path = `${cfg.photoPath}/${filename}`;
-  const token = store.get('token');
-
-  // Check if file exists (to get SHA for update)
-  let sha = null;
-  try {
-    const existing = await githubGet(path);
-    sha = existing.sha;
-  } catch (_) {}
-
-  const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message,
-      content: base64Data,
-      branch: cfg.branch,
-      ...(sha ? { sha } : {}),
-    }),
+  // base64Data is already base64 (from FileReader). The function
+  // looks up an existing file's sha itself, so none is passed here.
+  const path = getConfig().photoPath + '/' + filename;
+  return callBackend({
+    action: 'putFile', pin: sessionPin, path: path,
+    contentBase64: base64Data, message: message
   });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `Upload failed: ${res.status}`);
-  }
-  return res.json();
 }
 
 // ============================================================
@@ -2112,7 +2020,7 @@ async function startUpload() {
   // Save whatever is in the form right now before uploading
   saveCurrentFormToMeta();
 
-  if (!store.get('token')) { toast('No GitHub token configured. Go to Setup first.', 'error'); return; }
+  if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
 
   // Only upload items that are still pending — skip done items
   const pending = uploadQueue.filter(i => i.status === 'pending');
@@ -2365,7 +2273,7 @@ function updateEntry(seasonIdx, galleryIdx, field, value) {
 
 async function uploadGalleryCover(seasonIdx, galleryIdx, file) {
   if (!file) return;
-  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
   if (file.size > 900000) { toast('Cover image must be under 900KB. Please compress first.', 'error'); return; }
 
   const gallery  = SEASONS_DATA[seasonIdx].galleries[galleryIdx];
@@ -2444,7 +2352,7 @@ function renderGalleryPreview() {
 }
 
 async function saveSeasonToGitHub(seasonIdx) {
-  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
 
   const season = SEASONS_DATA[seasonIdx];
   toast('Fetching media/index.html…', 'info');
@@ -2508,7 +2416,7 @@ let cachedIndexSha = null;
 let cachedIndexContent = null;
 
 async function loadLivePhotos() {
-  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
   const grid = document.getElementById('manage-grid');
   grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--grey-500);"><i class="fas fa-spinner fa-spin" style="font-size:2rem;margin-bottom:12px;display:block;"></i>Loading photos from GitHub…</div>`;
 
@@ -2653,7 +2561,7 @@ function renderManageGrid() {
 
 async function removePhoto(idx) {
   if (!confirm(`Remove "${livePhotos[idx].caption}" from the media page?`)) return;
-  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
 
   const photo = livePhotos[idx];
 
@@ -2692,7 +2600,7 @@ async function removePhoto(idx) {
 
 async function replacePhoto(idx, file) {
   if (!file) return;
-  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
   if (file.size > 900000) {
     toast('File too large — please compress to under 900KB first.', 'error');
     return;
@@ -2779,7 +2687,7 @@ function addGalleryEntryManage(si) {
 }
 
 async function saveAllGalleriesToGitHub() {
-  if (!store.get('token')) { toast('No GitHub token. Go to Setup first.', 'error'); return; }
+  if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
   toast('Fetching media/index.html…', 'info');
   try {
     const indexFile = await githubGet('media/index.html');
