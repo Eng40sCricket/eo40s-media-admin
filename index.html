@@ -2023,6 +2023,7 @@ async function startUpload() {
 
   const btn = document.getElementById('btn-upload'); // was undeclared — caused console error
 
+
   if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
 
   // Only upload items that are still pending — skip done items
