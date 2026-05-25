@@ -1646,6 +1646,7 @@ async function attemptLogin() {
     renderSeasonAccordion();
     renderGalleryPreview();
     log('Signed in successfully.', 'success');
+    loadGalleriesFromGitHub(); // silently sync gallery data from live file
   } catch (err) {
     errEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' +
       (err.status === 401 ? 'Incorrect PIN. Please try again.'
@@ -2020,6 +2021,8 @@ async function startUpload() {
   // Save whatever is in the form right now before uploading
   saveCurrentFormToMeta();
 
+  const btn = document.getElementById('btn-upload'); // was undeclared — caused console error
+
   if (!sessionPin) { toast('Session expired — please reload the page and sign in.', 'error'); return; }
 
   // Only upload items that are still pending — skip done items
@@ -2329,6 +2332,34 @@ function addNewSeason() {
 function saveSeasonsLocally() {
   store.set('seasons', SEASONS_DATA);
   renderGalleryPreview();
+}
+
+// Fetch PHOTO_GALLERIES from the live media/index.html and sync into SEASONS_DATA.
+// Called once after login — silently overwrites the (possibly empty) local-storage
+// copy with the real data from GitHub so the Gallery tab shows actual galleries.
+async function loadGalleriesFromGitHub() {
+  try {
+    const indexFile = await githubGet('media/index.html');
+    const content   = decodeURIComponent(escape(atob(indexFile.content.replace(/\n/g, ''))));
+    const match     = /const PHOTO_GALLERIES\s*=\s*(\[[\s\S]*?\]);/.exec(content);
+    if (!match) {
+      log('No PHOTO_GALLERIES found in media/index.html — gallery list starts empty.', 'info');
+      return;
+    }
+    // Safe eval of trusted data from our own repo — no user input reaches here.
+    // eslint-disable-next-line no-new-func
+    const parsed = (new Function('return ' + match[1]))();
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      SEASONS_DATA = parsed;
+      saveSeasonsLocally();
+      renderSeasonAccordion();
+      renderGalleryPreview();
+      log('Gallery data loaded from GitHub.', 'success');
+    }
+  } catch (e) {
+    // Non-fatal — the accordion will just show whatever was in local storage.
+    log('Could not load gallery data from GitHub: ' + e.message, 'info');
+  }
 }
 
 function renderGalleryPreview() {
