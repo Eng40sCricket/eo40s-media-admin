@@ -1643,10 +1643,13 @@ async function attemptLogin() {
     sessionPin = pin;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-screen').style.display = 'block';
-    renderSeasonAccordion();
+    // Show a loading placeholder in the gallery accordion while we fetch live data from GitHub.
+    document.getElementById('season-accordion').innerHTML =
+      '<div style="padding:24px;text-align:center;color:var(--grey-500);font-size:13px;">' +
+      '<i class="fas fa-spinner fa-spin" style="margin-right:8px;color:var(--sky);"></i>Loading galleries from GitHub…</div>';
     renderGalleryPreview();
     log('Signed in successfully.', 'success');
-    loadGalleriesFromGitHub(); // silently sync gallery data from live file
+    loadGalleriesFromGitHub(); // syncs gallery data from media/index.html — replaces the loading placeholder above
   } catch (err) {
     errEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' +
       (err.status === 401 ? 'Incorrect PIN. Please try again.'
@@ -2355,10 +2358,14 @@ async function loadGalleriesFromGitHub() {
       saveSeasonsLocally();
       renderSeasonAccordion();
       renderGalleryPreview();
+      toast('Galleries loaded from GitHub.', 'success');
       log('Gallery data loaded from GitHub.', 'success');
+    } else {
+      renderSeasonAccordion(); // clear the loading placeholder
     }
   } catch (e) {
-    // Non-fatal — the accordion will just show whatever was in local storage.
+    // Non-fatal — clear the loading placeholder and fall back to whatever local storage had.
+    renderSeasonAccordion();
     log('Could not load gallery data from GitHub: ' + e.message, 'info');
   }
 }
